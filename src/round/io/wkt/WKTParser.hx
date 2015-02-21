@@ -5,11 +5,26 @@ import haxe.io.Bytes;
 import winnepego.Parser;
 import winnepego.Parsers;
 
-
-enum WKTGeom {
-  WKTPoint(x: Float, y: Float);
+interface WKTGeom {
 }
 
+class WKTPoint implements WKTGeom {
+  public var x(default, null): Float;
+  public var y(default, null): Float;
+
+  public function new(x: Float, y: Float) {
+    this.x = x;
+    this.y = y;
+  }
+}
+
+class WKTLinestring implements WKTGeom {
+  public var points(default, null): Array<WKTPoint>;
+
+  public function new(points: Array<WKTPoint>) {
+    this.points = points;
+  }
+}
 
 /**
  * Parses basic WKT geometries. This is based off section 7 of the spec
@@ -34,8 +49,8 @@ class WKTParser {
   // ---------------------------------------------------------------------------
 
   public static var geometryTaggedText = Parser.apply(
-    pointTaggedText,
-    function(g) { return g; });
+    pointTaggedText | linestringTaggedText,
+    function(g: WKTGeom): WKTGeom { return g; });
 
   // ---------------------------------------------------------------------------
   // POINT
@@ -43,7 +58,7 @@ class WKTParser {
 
   public static var point = Parser.apply(
     Parsers.float > Parsers.whitespace > Parsers.float,
-    function(x, _, y) { return WKTPoint(x, y); });
+    function(x, _, y) { return new WKTPoint(x, y); });
 
   public static var points = Parsers.repSep(point, sep);
 
@@ -59,5 +74,12 @@ class WKTParser {
   // LINESTRING
   // ---------------------------------------------------------------------------
 
+  public static var linestringText = Parser.apply(
+    leftParen > points > rightParen,
+    function(_, ps, _) { return new WKTLinestring(ps); });
+
+  public static var linestringTaggedText = Parser.apply(
+    'LINESTRING ' > linestringText,
+    function(_, ls) { return ls; });
 
 }

@@ -27,8 +27,15 @@ class ShouldLexResult<T> extends Should<LexResult<T>> {
     switch(value) {
       case Pass(_, _, result):
         Assert.same(result, exp, true, null, p);
-      case Fail(_, _, error):
-        assert(false, 'Failed with error: ${error}', stackPos(p));
+      case Fail(buf, pos, error):
+        var msg = [
+          '',
+          error,
+          buf.toString(),
+          [for(i in 0...pos-1) ' '].join('') + '^',
+          '',
+        ];
+        assert(false, msg.join('\n'), stackPos(p));
     }
   }
 }
