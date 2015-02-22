@@ -38,4 +38,13 @@ class ShouldLexResult<T> extends Should<LexResult<T>> {
         assert(false, msg.join('\n'), stackPos(p));
     }
   }
+
+  public function notParse(?p: PosInfos) {
+    switch(value) {
+      case Pass(_, _, result):
+        Assert.fail('should not have parsed, got ${result}', p);
+      case _:
+        assert(true, '', stackPos(p));
+    }
+  }
 }

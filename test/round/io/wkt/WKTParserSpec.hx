@@ -3,6 +3,7 @@ package round.io.wkt;
 import haxe.io.Bytes;
 
 import buddy.BuddySuite;
+import utest.Assert;
 import winnepego.Parser;
 
 import round.io.wkt.WKTParser;
@@ -87,8 +88,9 @@ class WKTParserSpec extends BuddySuite {
     });
 
     describe('LINESTRING parser', {
-      var text       = WKTParser.linestringText;
-      var taggedText = WKTParser.linestringTaggedText;
+      var text        = WKTParser.linestringText;
+      var taggedText  = WKTParser.linestringTaggedText;
+      var linestrings = WKTParser.linestrings;
 
 
       it('should parse an empty LINESTRING text', {
@@ -109,8 +111,76 @@ class WKTParserSpec extends BuddySuite {
         res.should.parse(new WKTLinestring([]));
       });
 
+      it('should parse an empty set of LINESTRINGs', {
+        var res = parse(linestrings, '');
+        res.should.parse([]);
+      });
+
+      it('should parse a set of LINESTRINGs', {
+        var res = parse(linestrings, '(1 2, 3 4), (5 6)');
+        res.should.parse([
+          new WKTLinestring([new WKTPoint(1.0, 2.0), new WKTPoint(3.0, 4.0)]),
+          new WKTLinestring([new WKTPoint(5.0, 6.0)]),
+        ]);
+      });
+
     });
 
+    describe('POLYGON parser', {
+      var text = WKTParser.polygonText;
+
+      describe('with a shell', {
+        var poly = '((1 2))';
+
+        it('should parse the shell', {
+          var res = parse(text, poly);
+          res.should.parse(new WKTPolygon(
+            new WKTLinestring([new WKTPoint(1.0, 2.0)]),
+            []
+          ));
+        });
+
+        it('should have no holes', {
+          switch(parse(text, poly)) {
+            case Fail(_, _, msg): throw msg;
+            case Pass(_, _, poly):
+              poly.holes.length.should.be(0);
+          }
+        });
+
+      });
+
+      describe('with no ring', {
+        var poly = '()';
+
+        it('should not parse', {
+          parse(text, poly).should.notParse();
+        });
+
+      });
+
+      describe('with holes', {
+        var poly = '((1 2), (3 4), (5 6))';
+
+        it('should have its shell', {
+          switch(parse(text, poly)) {
+            case Fail(_, _, msg):  throw msg;
+            case Pass(_, _, poly):
+              Assert.same(poly.ring,
+                new WKTLinestring([new WKTPoint(1.0, 2.0)]));
+          }
+        });
+
+        it('should have holes', {
+          switch(parse(text, poly)) {
+            case Fail(_, _, msg):  throw msg;
+            case Pass(_, _, poly): poly.holes.length.should.be(2);
+          }
+        });
+
+      });
+
+    });
 
     describe('geometryTaggedText parser', {
       var geom = WKTParser.geometryTaggedText;
@@ -126,6 +196,14 @@ class WKTParserSpec extends BuddySuite {
           new WKTPoint(6.66, -78.0),
           new WKTPoint(1.0, 2.0),
         ]));
+      });
+
+      it('should parse a POLYGON', {
+        var res = parse(geom, 'POLYGON ((1 2), (3 4))');
+        res.should.parse(new WKTPolygon(
+          new WKTLinestring([new WKTPoint(1.0, 2.0)]),
+          [new WKTLinestring([new WKTPoint(3.0, 4.0)])]
+        ));
       });
 
     });

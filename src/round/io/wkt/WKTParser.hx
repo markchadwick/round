@@ -26,6 +26,16 @@ class WKTLinestring implements WKTGeom {
   }
 }
 
+class WKTPolygon implements WKTGeom {
+  public var ring(default, null): WKTLinestring;
+  public var holes(default, null): Array<WKTLinestring>;
+
+  public function new(ring: WKTLinestring, holes: Array<WKTLinestring>) {
+    this.ring  = ring;
+    this.holes = holes;
+  }
+}
+
 /**
  * Parses basic WKT geometries. This is based off section 7 of the spec
  * available at:
@@ -49,7 +59,9 @@ class WKTParser {
   // ---------------------------------------------------------------------------
 
   public static var geometryTaggedText = Parser.apply(
-    pointTaggedText | linestringTaggedText,
+    pointTaggedText |
+    linestringTaggedText |
+    polygonTaggedText,
     function(g: WKTGeom): WKTGeom { return g; });
 
   // ---------------------------------------------------------------------------
@@ -78,8 +90,29 @@ class WKTParser {
     leftParen > points > rightParen,
     function(_, ps, _) { return new WKTLinestring(ps); });
 
+  // TODO Potentially not used
+  public static var linestrings = Parsers.repSep(linestringText, sep);
+
   public static var linestringTaggedText = Parser.apply(
     'LINESTRING ' > linestringText,
     function(_, ls) { return ls; });
+
+  // ---------------------------------------------------------------------------
+  // POLYGON
+  // ---------------------------------------------------------------------------
+
+  public static var polygonHole = Parser.apply(
+    sep > linestringText,
+    function(_, ls) { return ls; });
+
+  public static var polygonText = Parser.apply(
+    leftParen > linestringText > ++polygonHole > rightParen,
+    function(_, shell, holes, _) {
+      return new WKTPolygon(shell, holes);
+    });
+
+  public static var polygonTaggedText = Parser.apply(
+    'POLYGON ' > polygonText,
+    function(_, polygon) { return polygon; });
 
 }
